@@ -64,7 +64,6 @@ async def handle_client(reader, writer):
         logger.warning(f'Too many connections from {client_ip}')
         writer.write("ERROR: Too many connections from your IP.".encode())
         await writer.drain()
-        writer.close()
         active_connections -= 1
         ip_connections[client_ip] -= 1
         return
@@ -79,13 +78,22 @@ async def handle_client(reader, writer):
         nonlocal timeout_handle
         if timeout_handle:
             timeout_handle.cancel()
-        timeout_handle = asyncio.create_task(handle_timeout(writer, client_ip, client_port))
-    
-    async def handle_timeout(writer, ip, port):
-        logger.info(f'Connection timeout for {ip}:{port}')
-        writer.write("ERROR: Connection timed out due to inactivity".encode())
-        await writer.drain()
-        writer.close()
+        timeout_handle = asyncio.create_task(asyncio.sleep(CONN_TIMEOUT))
+        timeout_handle.add_done_callback(lambda _: handle_timeout_callback())
+
+    def handle_timeout_callback():
+        if not timeout_handle.cancelled() and not writer.is_closing():
+            logger.info(f'Connection timeout for {client_ip}:{client_port}')
+            asyncio.create_task(send_timeout_message())
+
+    async def send_timeout_message():
+        if not writer.is_closing():
+            try:
+                writer.write("ERROR: Connection timed out due to inactivity".encode())
+                await writer.drain()
+                writer.close()
+            except Exception as e:
+                logger.warning(f"Error sending timeout message: {e}")
     
     reset_timeout()
     

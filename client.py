@@ -59,9 +59,17 @@ def main():
             # Receive the result from the server
             data = c.recv(1024)
             server_response = data.decode()
-            num_from_server = int(server_response.split(" ")[-1])
             print(f"Received from server: {server_response}")
-            print(f"Calculation: {number} + {num_from_server} = {number + num_from_server}")
+
+            # Check if response starts with "ERROR"
+            if server_response.startswith("ERROR:"):
+                print(f"Server error: {server_response}")
+            else:
+                try:
+                    num_from_server = int(server_response.split(" ")[-1])
+                    print(f"Calculation: {number} + {num_from_server} = {number + num_from_server}")
+                except ValueError as e:
+                    print(f"Failed to parse server response: {e}")
             
         except ConnectionRefusedError:
             print(f"Error: Could not connect to server at {HOST}:{SERVER_PORT}")
