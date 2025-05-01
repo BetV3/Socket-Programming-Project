@@ -1,7 +1,7 @@
 import socket
 import asyncio
 
-HOST = 'localhost'
+HOST = '0.0.0.0'
 PORT = 65432
 NUM = 99
 SERVER_NAME = 'Server of Elvis Ramirez'
